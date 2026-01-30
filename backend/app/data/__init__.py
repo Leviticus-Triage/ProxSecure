@@ -1,0 +1,1 @@
+"""Static mock data package."""

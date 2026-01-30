@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: proxsecure-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=http://localhost
+      - PROXMOX_MODE=${PROXMOX_MODE:-mock}
+      - PROXMOX_HOST=${PROXMOX_HOST:-}
+      - PROXMOX_USER=${PROXMOX_USER:-}
+      - PROXMOX_PASSWORD=${PROXMOX_PASSWORD:-}
+      - PROXMOX_TOKEN_NAME=${PROXMOX_TOKEN_NAME:-}
+      - PROXMOX_TOKEN_VALUE=${PROXMOX_TOKEN_VALUE:-}
+      - PROXMOX_VERIFY_SSL=${PROXMOX_VERIFY_SSL:-true}
+      - PROXMOX_HYBRID_CONFIG=${PROXMOX_HYBRID_CONFIG:-{}}
+      - AUTOMATION_ENABLED=${AUTOMATION_ENABLED:-false}
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: proxsecure-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: proxsecure-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
