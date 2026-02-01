@@ -4,8 +4,9 @@ import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, Minimize2 } f
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configure pdf.js worker for Vite + react-pdf 10.x + pdfjs-dist 5.x
+// Use unpkg with ESM path format for pdfjs-dist 5.x
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 /**
  * Interactive PDF Viewer Modal with zoom, pan, and page navigation.
