@@ -274,9 +274,12 @@ Note: When using Docker Compose, the main entry is Nginx on port 80. The API is 
 ![Node Detail View](docs/images/node-detail-view.png)
 
 3. **Filtering:** Apply "Show Critical Only" to see critical-severity failed checks.
-4. **Remediation:** Open the remediation modal for the "SSH root login disabled" check.
+4. **Remediation:** Open the remediation modal for any failing check to see Ansible snippets and create tickets.
+
+![Remediation Modal](docs/images/remediation-modal.png)
+
 5. **Ansible:** Copy the Ansible snippet to the clipboard and paste into your playbook or terminal.
-6. **PDF report:** Click "Download Audit Report" to generate and download the compliance PDF.
+6. **PDF report:** Click "Download Audit Report" to generate and download the compliance PDF. See [example report (PDF)](docs/compliance-report-example.pdf).
 7. **Trend:** Scroll to the 30-day compliance trend chart for the node.
 
 ---

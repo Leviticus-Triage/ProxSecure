@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, RefreshCw, Zap } from 'lucide-react';
+import { ArrowLeft, Download, RefreshCw, Zap, Eye } from 'lucide-react';
 import * as api from '../../services/api';
 import { useNodeHistory } from '../../hooks/useNodeHistory';
 import { formatRelativeTime, formatCategoryName } from '../../utils/formatters';
@@ -11,6 +11,7 @@ import ComplianceTrendChart from '../dashboard/ComplianceTrendChart';
 import CategoryBreakdown from './CategoryBreakdown';
 import CheckResultCard from './CheckResultCard';
 import RemediationBlock from './RemediationBlock';
+import PDFViewerModal from '../common/PDFViewerModal';
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS);
 
@@ -28,6 +29,8 @@ export default function AuditDetailView({ nodeId }) {
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [selectedCheck, setSelectedCheck] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const { history, loading: historyLoading } = useNodeHistory(nodeId);
 
@@ -56,6 +59,27 @@ export default function AuditDetailView({ nodeId }) {
 
   const handleCreateTicket = () => {
     toastSuccess('Ticket #INC-492 created in Jira');
+  };
+
+  const handlePreviewReport = async () => {
+    if (!nodeId) return;
+    setPreviewLoading(true);
+    try {
+      const blob = await api.downloadNodeReport(nodeId);
+      const url = window.URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch (err) {
+      toastError(err.message ?? 'Failed to load report preview.');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfPreviewUrl) {
+      window.URL.revokeObjectURL(pdfPreviewUrl);
+    }
+    setPdfPreviewUrl(null);
   };
 
   const fetchNode = useCallback(async () => {
@@ -151,6 +175,24 @@ export default function AuditDetailView({ nodeId }) {
 
       {/* Action bar */}
       <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handlePreviewReport}
+          disabled={previewLoading || loading}
+          className="inline-flex items-center gap-2 rounded-md border border-primary-300 bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {previewLoading ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+              Loading...
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4" />
+              Preview Report
+            </>
+          )}
+        </button>
         <button
           type="button"
           onClick={handleDownloadReport}
@@ -293,6 +335,14 @@ export default function AuditDetailView({ nodeId }) {
           checkResult={selectedCheck}
           nodeId={nodeId}
           onClose={() => setSelectedCheck(null)}
+        />
+      )}
+
+      {pdfPreviewUrl && (
+        <PDFViewerModal
+          pdfUrl={pdfPreviewUrl}
+          title={`Compliance Report – ${node?.node_name ?? nodeId}`}
+          onClose={closePdfPreview}
         />
       )}
     </div>
