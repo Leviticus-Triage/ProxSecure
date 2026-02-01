@@ -26,6 +26,9 @@ COLOR_GRAY_200 = colors.HexColor("#e5e7eb")
 COLOR_PASS = colors.HexColor("#10b981")
 COLOR_FAIL = colors.HexColor("#ef4444")
 
+# A4 usable width with 1.5cm margins each side
+PAGE_WIDTH = A4[0] - 3 * cm
+
 
 class ReportService:
     """
@@ -39,55 +42,59 @@ class ReportService:
         audit_result: NodeAuditResult,
         history: list[HistoricalDataPoint] | None = None,
     ) -> bytes:
-        """
-        Build a multi-section PDF report and return as bytes.
-
-        Args:
-            node_id: Node identifier (used in filename).
-            audit_result: Full node audit result from AuditService.get_node_audit().
-            history: Optional 30-day compliance trend (from AuditService.get_node_history).
-                     If None or empty, the Compliance Trend Summary section is omitted.
-
-        Returns:
-            PDF file content as bytes.
-        """
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
             rightMargin=1.5 * cm,
             leftMargin=1.5 * cm,
-            topMargin=1.5 * cm,
-            bottomMargin=1.5 * cm,
+            topMargin=1 * cm,
+            bottomMargin=1 * cm,
         )
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
             name="ProxSecureTitle",
             parent=styles["Title"],
-            fontSize=22,
+            fontSize=20,
             textColor=COLOR_PRIMARY,
-            spaceAfter=12,
+            spaceAfter=6,
+            spaceBefore=0,
         )
         heading_style = ParagraphStyle(
             name="ProxSecureHeading",
             parent=styles["Heading2"],
-            fontSize=14,
+            fontSize=13,
             textColor=COLOR_GRAY_800,
-            spaceBefore=14,
-            spaceAfter=8,
+            spaceBefore=10,
+            spaceAfter=6,
         )
         body_style = ParagraphStyle(
             name="ProxSecureBody",
             parent=styles["Normal"],
-            fontSize=10,
+            fontSize=9,
             textColor=COLOR_GRAY_600,
-            spaceAfter=6,
+            spaceAfter=4,
+        )
+        # Style for table cell paragraphs (enables word-wrap)
+        cell_style = ParagraphStyle(
+            name="CellStyle",
+            parent=styles["Normal"],
+            fontSize=8,
+            textColor=COLOR_GRAY_600,
+            leading=10,
+        )
+        cell_header_style = ParagraphStyle(
+            name="CellHeaderStyle",
+            parent=styles["Normal"],
+            fontSize=8,
+            textColor=colors.white,
+            fontName="Helvetica-Bold",
+            leading=10,
         )
         story = []
 
-        # --- Cover Page ---
+        # --- Title + Executive Summary on Page 1 (no separate cover page) ---
         story.append(Paragraph("Compliance Audit Report", title_style))
-        story.append(Spacer(1, 0.5 * cm))
         story.append(
             Paragraph(
                 f"<b>Customer Node:</b> {audit_result.node_name or node_id}",
@@ -96,14 +103,13 @@ class ReportService:
         )
         gen_date = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
         story.append(Paragraph(f"<b>Report generated:</b> {gen_date}", body_style))
-        story.append(Spacer(1, 1 * cm))
         story.append(
             Paragraph(
                 "<i>ProxSecure Audit — Compliance automation for Proxmox infrastructure</i>",
                 body_style,
             )
         )
-        story.append(PageBreak())
+        story.append(Spacer(1, 0.3 * cm))
 
         # --- Executive Summary ---
         story.append(Paragraph("Executive Summary", heading_style))
@@ -137,51 +143,56 @@ class ReportService:
                     body_style,
                 )
             )
-        story.append(Spacer(1, 0.5 * cm))
+        story.append(Spacer(1, 0.3 * cm))
 
         # --- Detailed Findings Table ---
         story.append(Paragraph("Detailed Findings", heading_style))
+
+        # Fixed column widths: Check(35%) Category(15%) Status(10%) Severity(10%) ISO/BSI(30%)
+        col_check = PAGE_WIDTH * 0.35
+        col_cat = PAGE_WIDTH * 0.15
+        col_status = PAGE_WIDTH * 0.10
+        col_sev = PAGE_WIDTH * 0.10
+        col_compliance = PAGE_WIDTH * 0.30
+
         table_data = [
             [
-                "Check Name",
-                "Category",
-                "Status",
-                "Severity",
-                "ISO 27001",
-                "BSI IT-Grundschutz",
+                Paragraph("Check Name", cell_header_style),
+                Paragraph("Category", cell_header_style),
+                Paragraph("Status", cell_header_style),
+                Paragraph("Severity", cell_header_style),
+                Paragraph("ISO 27001 / BSI", cell_header_style),
             ]
         ]
         for r in audit_result.check_results:
             iso_refs = ", ".join(r.compliance_mapping.iso_27001) if r.compliance_mapping else "—"
             bsi_refs = ", ".join(r.compliance_mapping.bsi_grundschutz) if r.compliance_mapping else "—"
+            compliance_text = f"{iso_refs}<br/>{bsi_refs}" if (iso_refs != "—" or bsi_refs != "—") else "—"
             table_data.append([
-                r.check_name or r.check_id,
-                r.category.replace("_", " ") if r.category else "—",
-                r.status,
-                r.severity or "—",
-                iso_refs,
-                bsi_refs,
+                Paragraph(r.check_name or r.check_id, cell_style),
+                Paragraph((r.category.replace("_", " ") if r.category else "—"), cell_style),
+                Paragraph(r.status, cell_style),
+                Paragraph(r.severity or "—", cell_style),
+                Paragraph(compliance_text, cell_style),
             ])
-        t = Table(table_data, colWidths=[4 * cm, 2.5 * cm, 1.5 * cm, 1.5 * cm, 2.5 * cm, 2.5 * cm])
+
+        t = Table(
+            table_data,
+            colWidths=[col_check, col_cat, col_status, col_sev, col_compliance],
+            repeatRows=1,
+        )
         t.setStyle(
             TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), COLOR_GRAY_800),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
-                ("TOPPADDING", (0, 0), (-1, 0), 10),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.white),
                 ("TEXTCOLOR", (0, 1), (-1, -1), COLOR_GRAY_600),
-                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 1), (-1, -1), 7),
                 ("GRID", (0, 0), (-1, -1), 0.5, COLOR_GRAY_200),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("WORDWRAP", (0, 0), (-1, -1), True),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 1), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 1), (-1, -1), 6),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
             ])
         )
         story.append(t)
@@ -205,9 +216,9 @@ class ReportService:
                 if c.remediation and c.remediation.ansible_snippet:
                     story.append(
                         Paragraph(
-                            f'<font size="8" face="Courier">{c.remediation.ansible_snippet[:500].replace(chr(10), "<br/>")}...</font>'
+                            f'<font size="7" face="Courier">{c.remediation.ansible_snippet[:500].replace(chr(10), "<br/>")}...</font>'
                             if len(c.remediation.ansible_snippet) > 500
-                            else f'<font size="8" face="Courier">{c.remediation.ansible_snippet.replace(chr(10), "<br/>")}</font>',
+                            else f'<font size="7" face="Courier">{c.remediation.ansible_snippet.replace(chr(10), "<br/>")}</font>',
                             body_style,
                         )
                     )

@@ -37,6 +37,9 @@ backend/.env.production
 frontend/.env.development
 frontend/.env.production
 
+# Local-only (do not publish)
+local-guide.md
+
 # IDE
 .vscode/
 .idea/

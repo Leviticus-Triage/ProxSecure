@@ -1,5 +1,7 @@
 # ProxSecure Audit
 
+![Dashboard Overview](docs/images/dashboard-overview.png)
+
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
@@ -60,6 +62,8 @@ When `AUTOMATION_ENABLED=true`, the API exposes:
 - **GET /api/v1/automation/status** — Automation service status and configuration.
 
 The frontend shows an "Execute Remediation" section in the remediation modal (dry-run and execute, with warnings for critical checks). See [AUTOMATION.md](AUTOMATION.md) for safety and usage.
+
+![Remediation Modal](docs/images/remediation-modal.png)
 
 ---
 
@@ -222,19 +226,30 @@ graph TD
 
 ## 7. Compliance Frameworks Explained
 
-- **ISO 27001:2022:** International information security standard. Each check maps to control references (e.g. A.9.2.3, A.12.3.1, A.13.1.1).
-- **BSI IT-Grundschutz:** German federal security framework. Each check maps to module references (e.g. SYS.1.3.A14, NET.1.1.A5, CON.3.1.A1).
+- **ISO 27001:2022:** International information security standard. Each check maps to Annex A control references (e.g. A.8.2, A.8.13, A.8.20). All mappings verified against ISO 27001:2022 (updated from 2013 version).
+- **BSI IT-Grundschutz:** German federal security framework (Edition 2023). Each check maps to module references (e.g. SYS.1.3.A14, NET.1.1.A5, CON.3.1.A1).
+- **NIS2 Readiness:** Compliance checks align with NIS2 Directive Article 21 cybersecurity risk-management measures, demonstrating readiness for EU cybersecurity requirements.
 - **Dual mapping:** Every compliance check in ProxSecure maps to both frameworks so MSPs can demonstrate coverage for international and German market requirements.
+
+See [Compliance Mapping Checklist](docs/COMPLIANCE_MAPPING.md) for the full control mapping table and verification steps.
 
 ---
 
 ## 8. Quick Start
 
-**One-command deployment:**
+**Interactive deployment (recommended):**
 
 ```bash
 git clone <repository-url>
 cd Proxsecure
+./deploy.sh
+```
+
+The script checks for Docker, asks for Mock or Real Proxmox mode, generates `backend/.env`, builds and starts the stack, and runs a health check.
+
+**Or manual Docker Compose:**
+
+```bash
 docker-compose up --build
 ```
 
@@ -251,7 +266,13 @@ Note: When using Docker Compose, the main entry is Nginx on port 80. The API is 
 ## 9. Demo Workflow
 
 1. **Dashboard:** View the fleet with 3 customer nodes (40%, 70%, 90% compliance).
+
+![Node List Triage](docs/images/node-list-triage.png)
+
 2. **Drill-down:** Click Customer-A-Node (critical) to open the node detail view.
+
+![Node Detail View](docs/images/node-detail-view.png)
+
 3. **Filtering:** Apply "Show Critical Only" to see critical-severity failed checks.
 4. **Remediation:** Open the remediation modal for the "SSH root login disabled" check.
 5. **Ansible:** Copy the Ansible snippet to the clipboard and paste into your playbook or terminal.

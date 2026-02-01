@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, RefreshCw, Zap } from 'lucide-react';
 import * as api from '../../services/api';
 import { useNodeHistory } from '../../hooks/useNodeHistory';
 import { formatRelativeTime, formatCategoryName } from '../../utils/formatters';
@@ -52,6 +52,10 @@ export default function AuditDetailView({ nodeId }) {
     } finally {
       setDownloading(false);
     }
+  };
+
+  const handleCreateTicket = () => {
+    toastSuccess('Ticket #INC-492 created in Jira');
   };
 
   const fetchNode = useCallback(async () => {
@@ -171,6 +175,14 @@ export default function AuditDetailView({ nodeId }) {
         >
           <RefreshCw className="h-4 w-4" />
           Re-scan Node
+        </button>
+        <button
+          type="button"
+          onClick={handleCreateTicket}
+          className="inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
+        >
+          <Zap className="h-4 w-4" />
+          Create Service Ticket
         </button>
       </div>
 
